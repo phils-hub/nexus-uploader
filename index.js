@@ -42,31 +42,3 @@ components.map(compPath => {
     })
   }
 })
-
-/*
-.then(response => response.data.data)
-  .catch(err => console.error(err))
-*/
-/*
-axios.get(process.env.NEXUS_URL+'/all_repositories',
-  {
-    auth: {
-      username: process.env.NEXUS_AUTH_USER,
-      password: process.env.NEXUS_AUTH_PASS
-    },
-    headers: {
-      'Accept': 'application/json'
-    },
-  })
-  .then(response => response.data.data)
-  .then(repositories => {
-    console.log(repositories)
-    return repositories
-  })
-  .then(repositories => {
-    let tmpDirName = './tmp-' + new Date().getTime()
-    repositories.forEach(repo => fs.mkdirSync(path.resolve(tmpDirName, repo.id), { recursive: true }))
-    return repositories
-  })
-  .catch(err => console.error(err))
-  */
