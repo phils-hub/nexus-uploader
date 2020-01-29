@@ -1,6 +1,8 @@
 const path = require('path')
+const fs = require('fs')
 const program = require('commander')
-const colors = require('colors/safe')
+const convert = require('xml-js')
+const jsonpath = require('jsonpath')
 
 const nexusApi = require('./nexus-api')
 const utils = require('./utils')
@@ -19,26 +21,36 @@ if (! utils.validateArgs(program.directory)) {
   process.exit()
 }
 
-let idxOfBasename = utils.getBasenameIndex(program.directory)
-let components = utils.filePaths(program.directory)
-components.map(compPath => {
-  let directory = utils.normalizePath(path.dirname(compPath)).split('/')
-    .filter((e, idx) => idx >= idxOfBasename).join('/')
-  let pathToFile = compPath
-  let filename = path.basename(compPath)
-  console.log(`${program.simulate ? 'Simulating upload of' : 'Uploading'} component:
-  \tdirectory: ${directory}
-  \tpathToFile: ${pathToFile}
-  \tfilename: ${filename}
-  `)
-  
-  if (! program.simulate) {
-    nexusApi.publishRawComponent(directory, pathToFile, filename)
-    .catch(error => {
-      console.error(colors.red(`
-      Error occurred when processing file ${pathToFile}.
-      Error message: ${error.message}
-      `))
+// 1. Find all poms (done)
+// 2. Extract all dependencies (done)
+// 3. Download all dependencies from Nexus2
+// 4. Upload all dependencies to Nexus3
+
+function extractDependenciesFromPom(pomAsJson) {
+  let dependenciesNodes = jsonpath.query(pomAsJson, '$..dependencies')
+  return dependenciesNodes
+    .map(dependencies => dependencies.dependency)
+    .reduce((prev, curr) => prev.concat(curr))
+    .map(dependency => {
+      return {
+        groupId: dependency.groupId._text,
+        artifactId: dependency.artifactId._text,
+        version: dependency.version._text
+      }
     })
-  }
-})
+}
+
+function extractDependenciesFromDir(directory, pomFilter = 'superpom.xml') {
+  // let pomFilter = /(\w*|\d*)pom\.xml/
+  let pomPaths = utils.filePaths(directory, pomFilter)
+  let allDependencies = pomPaths.map(pomPath => {
+    let pomFile = fs.readFileSync(pomPath, { encoding: 'utf-8' })    
+    let pomAsJson = convert.xml2js(pomFile, { trim: true, compact: true})
+    let dependencies = extractDependenciesFromPom(pomAsJson)   
+    return dependencies
+  }).reduce((prev, curr) => prev.concat(curr))
+  return allDependencies
+}
+
+let dependencies = extractDependenciesFromDir(program.directory)
+console.log(dependencies)

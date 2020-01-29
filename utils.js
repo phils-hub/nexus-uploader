@@ -1,5 +1,6 @@
 const fs = require('fs')
 const path = require('path')
+const colors = require('colors')
 
 function validateArgs(directory) {
   let isValid = true
@@ -19,23 +20,24 @@ function validateArgs(directory) {
  * Obtain a list of flattened file paths of all files within the given directory.
  * Adapted from the source: https://gist.github.com/kethinov/6658166
  * @param {*} dir relative or absolute directory path
+ * @param {RegExp|String} filter to optionally filter based on the filename
  * @returns {String[]} of file paths 
  */
-function filePaths(dir) {
+function filePaths(dir, filter) { 
   function extractFilePaths(dir, fileList = []) {
     const files = fs.readdirSync(dir)
     for (const file of files) {
       const stat = fs.statSync(path.join(dir, file))
       if (stat.isDirectory()) {
         fileList = extractFilePaths(path.join(dir, file), fileList)
-      } else {
+      } else {        
         fileList.push(path.join(dir, file))
       }
     }
     return fileList
   }
   let filePaths = extractFilePaths(dir)
-  return filePaths
+  return filter ? filePaths.filter(filename => filename.match(filter)) : filePaths
 }
 
 function normalizePath(inputPath) {
